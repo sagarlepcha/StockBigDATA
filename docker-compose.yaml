@@ -1,0 +1,59 @@
+services:
+  namenode:
+    image: apache/hadoop:3.3.6
+    hostname: namenode
+    volumes:
+      - ./Makefile:/opt/hadoop/Makefile
+    ports:
+      - 9870:9870 # HDFS web UI
+      - 8020:8020 # HDFS port
+    env_file:
+      - ./config
+    environment:
+      ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
+    command: hdfs namenode
+
+  datanode:
+    image: apache/hadoop:3.3.6
+    command: ["hdfs", "datanode"]
+    env_file:
+      - ./config
+
+  resourcemanager:
+    image: apache/hadoop:3.3.6
+    hostname: resourcemanager
+    command: ["yarn", "resourcemanager"]
+    ports:
+      - 8088:8088 # YARN web UI
+    env_file:
+      - ./config
+
+  nodemanager:
+    image: apache/hadoop:3.3.6
+    hostname: nodemanager
+    command: ["yarn", "nodemanager"]
+    env_file:
+      - ./config
+
+  spark-master:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: spark-master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - 8080:8080 # Spark web UI
+      - 7077:7077 # Spark master port
+      - 8501:8501
+
+  spark-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
